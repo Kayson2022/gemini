@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Portfolio Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- CSS variables for theming --- */
+        :root {
+            --bg-color: #f0f2f5;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-bg-color: rgba(255, 255, 255, 0.7);
+            --text-color-primary: #1a1a1a;
+            --text-color-secondary: #555;
+            --border-color: rgba(200, 200, 200, 0.5);
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --header-text-color: #ffffff;
+            --input-bg-color: rgba(255, 255, 255, 0.9);
+            --input-border-color: #e0e0e0;
+            --positive-color: #28a745; 
+            --negative-color: #dc3545; 
+            --accent-color-1: #667eea;
+            --accent-color-2: #764ba2;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --bg-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            --card-bg-color: rgba(40, 40, 40, 0.7);
+            --text-color-primary: #f5f5f5;
+            --text-color-secondary: #a0a0a0;
+            --border-color: rgba(100, 100, 100, 0.5);
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --header-text-color: #ffffff;
+            --input-bg-color: rgba(50, 50, 50, 0.9);
+            --input-border-color: #444;
+            --positive-color: #28a745;
+            --negative-color: #dc3545;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: var(--text-color-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--header-text-color);
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        #userNameDisplay {
+            color: var(--header-text-color);
+        }
+
+        .data-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            color: white;
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+            transition: background-color 0.3s ease;
+        }
+
+        .data-status.saved { background: rgba(39, 174, 96, 0.8); }
+        .data-status.loading { background: rgba(255, 193, 7, 0.8); }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 1.2em;
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card-bg-color);
+            padding: 25px 15px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px var(--shadow-color);
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+            white-space: nowrap;
+        }
+
+        .stat-label {
+            color: var(--text-color-secondary);
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .charts-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .pie-charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .chart-container {
+            background: var(--card-bg-color);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+        }
+
+        .chart-container h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--text-color-primary);
+            font-weight: 600;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .add-investment, .investments-list {
+            background: var(--card-bg-color);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+        }
+
+        .add-investment h2, .investments-list h2 {
+            margin-bottom: 20px;
+            color: var(--text-color-primary);
+            font-weight: 600;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--text-color-secondary);
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--input-border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--input-bg-color);
+            color: var(--text-color-primary);
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-color-1);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--accent-color-1), var(--accent-color-2));
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 2px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .investment-item {
+            background: var(--input-bg-color);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .investment-item::before {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            z-index: -1;
+            margin: -2px;
+            border-radius: inherit;
+            background: linear-gradient(to right, var(--accent-color-1), var(--accent-color-2), #e74c3c);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .investment-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px var(--shadow-color);
+        }
+
+        .investment-item:hover::before {
+            opacity: 1;
+        }
+        
+        .investment-symbol {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--text-color-primary);
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: var(--text-color-primary);
+        }
+        
+        .stat-value.positive, .detail-value.positive { color: var(--positive-color); }
+        .stat-value.negative, .detail-value.negative { color: var(--negative-color); }
+        
+        .detail-label {
+            font-size: 0.8em;
+            color: var(--text-color-secondary);
+            margin-bottom: 2px;
+            font-weight: 500;
+        }
+        
+        #dataTransfer {
+            background: var(--card-bg-color);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px var(--shadow-color);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        #dataTransfer h2 {
+            margin-bottom: 20px;
+            color: var(--text-color-primary);
+            font-weight: 600;
+        }
+        
+        .form-group { margin-bottom: 15px; }
+        .btn-danger { background: linear-gradient(45deg, #e74c3c, #c0392b); padding: 8px 16px; font-size: 14px; width: auto; }
+        .btn-edit { background: linear-gradient(45deg, #f39c12, #e67e22); padding: 8px 16px; font-size: 14px; width: auto; margin-right: 10px; }
+        .btn-cancel { background: linear-gradient(45deg, #95a5a6, #7f8c8d); padding: 8px 16px; font-size: 14px; width: auto; margin-right: 10px; }
+        .btn-save { background: linear-gradient(45deg, #27ae60, #2ecc71); padding: 8px 16px; font-size: 14px; width: auto; }
+        .investment-item.editing { border-left-color: #f39c12; background: #fff; }
+        .investment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .account-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 600; color: white; margin-left: 10px; }
+        .account-regular { background: #3498db; }
+        .account-roth { background: #e74c3c; }
+        .account-401k { background: #f39c12; }
+        .account-529 { background: #9b59b6; }
+        .account-yahoo { background: #20c997; }
+        .investment-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 10px; }
+        .detail-item { text-align: center; }
+        .detail-value.notes { text-align: left; word-wrap: break-word; white-space: pre-wrap; font-weight: normal; grid-column: 1 / -1; padding: 5px 0; border-top: 1px solid var(--border-color); margin-top: 10px; font-size: 0.9em; color: var(--text-color-secondary); }
+        .edit-form { display: none; background: #f0f0f0; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .edit-form.active { display: block; }
+        .edit-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        .edit-group { display: flex; flex-direction: column; }
+        .edit-group.full-width { grid-column: 1 / -1; }
+        .edit-group label { font-size: 0.9em; color: var(--text-color-secondary); margin-bottom: 5px; font-weight: 600; }
+        .edit-input { padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; transition: border-color 0.3s ease; color: var(--text-color-primary); }
+        .edit-input:focus { outline: none; border-color: var(--accent-color-1); }
+        .edit-input.edit-notes { min-height: 100px; resize: vertical; }
+        .edit-buttons { display: flex; gap: 10px; justify-content: center; }
+        .empty-state { text-align: center; padding: 40px; color: var(--text-color-secondary); }
+        #clearAllDataBtn { background: linear-gradient(45deg, #e74c3c, #c0392b); }
+        #dataOutput, #dataInput { width: 100%; height: 150px; margin-top: 15px; padding: 10px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 0.9em; resize: vertical; display: none; background-color: var(--input-bg-color); color: var(--text-color-primary); }
+        #dataInput.active, #dataOutput.active { display: block; }
+        #loadImportedDataBtn { margin-top: 10px; display: none; width: auto; background: linear-gradient(45deg, #27ae60, #2ecc71); }
+        #loadImportedDataBtn.active { display: block; }
+        .investment-group { margin-bottom: 15px; border-radius: 10px; overflow: hidden; }
+        .investment-group-header { background: var(--card-bg-color); padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px var(--shadow-color); margin-bottom: 0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s ease; border-left: 4px solid; }
+        .investment-group-header[data-group-type="Regular Brokerage"] { border-left-color: #3498db; }
+        .investment-group-header[data-group-type="Roth IRA"] { border-left-color: #e74c3c; }
+        .investment-group-header[data-group-type="401(k)"] { border-left-color: #f39c12; }
+        .investment-group-header[data-group-type="Yahoo Finance"] { border-left-color: #20c997; }
+        .investment-group-header:hover { transform: translateY(-2px); box-shadow: 0 4px 15px var(--shadow-color); }
+        .group-summary { flex-grow: 1; }
+        .group-title { font-size: 1.3em; font-weight: 700; color: var(--text-color-primary); margin-bottom: 5px; }
+        .group-stats { display: flex; gap: 20px; font-size: 0.9em; }
+        .group-stat-item .detail-label { font-size: 0.75em; color: var(--text-color-secondary); }
+        .group-stat-item .detail-value { font-weight: 600; font-size: 1.1em; color: var(--text-color-primary); }
+        .group-stat-item .detail-value.positive { color: var(--positive-color); }
+        .group-stat-item .detail-value.negative { color: var(--negative-color); }
+        .toggle-icon { font-size: 1.5em; font-weight: bold; color: var(--accent-color-1); margin-left: 15px; transition: transform 0.2s ease; }
+        .investment-group.expanded .toggle-icon { transform: rotate(90deg); }
+        .investment-group-content { display: none; padding-top: 15px; background: transparent; }
+        .investment-group.expanded .investment-group-content { display: block; }
+        .refresh-button-container { text-align: right; margin-bottom: 20px; padding-right: 2px; }
+
+        .controls-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .controls-bar .form-group {
+            margin-bottom: 0;
+            flex-grow: 1;
+        }
+        .controls-bar label {
+            margin-right: 10px;
+            font-weight: 600;
+        }
+        .controls-bar select {
+            width: auto;
+            min-width: 200px;
+        }
+
+
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .main-content { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .investment-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .header { padding-top: 60px; }
+            .data-status { position: static; margin: 0 auto 15px auto; display: block; width: fit-content; font-size: 0.75em; }
+            .theme-toggle { top: 15px; left: 15px; }
+            .pie-charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 480px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            #dataTransfer button { width: 100%; margin: 5px 0; }
+            .controls-bar .form-group { width: 100%; } 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="theme-toggle" id="themeToggle" onclick="toggleTheme()">☀️</div>
+            <div class="data-status" id="dataStatus">💾 Data Stored Locally</div>
+            <h1>💰 Investment Portfolio Tracker <span id="userNameDisplay"></span></h1>
+            <p>Track your investments across all account types</p>
+            <div class="form-group" style="max-width: 300px; margin: 15px auto 0;">
+                <label for="userNameInput" style="color: var(--header-text-color); font-weight: normal; font-size: 0.9em; display: block; margin-bottom: 5px;">Your Name:</label>
+                <input type="text" id="userNameInput" placeholder="Enter your name" oninput="updateUserName()" style="background: rgba(255, 255, 255, 0.9); border: none; color: #333;">
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalValue">$0.00</div>
+                <div class="stat-label">Total Portfolio Value</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalInvested">$0.00</div>
+                <div class="stat-label">Total Invested</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalGainLoss">$0.00</div>
+                <div class="stat-label">Total Gain/Loss</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalReturn">0.00%</div>
+                <div class="stat-label">Total Return</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="todayPortfolioGainLoss">$0.00</div>
+                <div class="stat-label">Today's Portfolio Gain/Loss</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="estimatedAnnualIncome">$0.00</div>
+                <div class="stat-label">Est. Annual Income</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="portfolioYieldOnCost">0.00%</div>
+                <div class="stat-label">Portfolio Yield on Cost</div>
+            </div>
+        </div>
+
+        <div class="refresh-button-container">
+            <button type="button" class="btn" id="toggleAutoRefreshBtn" onclick="toggleAutoRefresh()">Pause Auto-Refresh</button>
+            <button type="button" class="btn" onclick="refreshAllPrices()">Refresh Now</button>
+        </div>
+
+        <div class="charts-section">
+            <div class="chart-container">
+                <h3>Portfolio Performance History</h3>
+                <div class="chart-wrapper">
+                    <canvas id="historicalChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="pie-charts-container">
+                <div class="chart-container">
+                    <h3>Portfolio by Account Type</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="accountChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <h3>Portfolio by Investment Type</h3>
+                    <div class="chart-wrapper">
+                        <canvas id="investmentChart"></canvas>
+                    </div>
+                </div>
+            </div>
+             
+        </div>
+
+        <div class="main-content">
+            <div class="add-investment">
+				<div class="investment-group-header" onclick="toggleAddForm()" style="margin-bottom: 0; border-radius: 10px 10px 0 0; border-left-color: #27ae60;">
+					<div class="group-summary">
+						<div class="group-title">Add New Investment 
+							<span class="account-badge" style="background: #27ae60;">Form</span>
+						</div>
+						<div class="group-stats">
+							<div class="group-stat-item">
+								<div class="detail-label">Click to expand form</div>
+							</div>
+						</div>
+					</div>
+					<span class="toggle-icon" id="addFormToggleIcon">&#9658;</span>
+				</div>
+				
+				<div id="addFormContent" style="display: none; padding: 25px; background: transparent;">
+					<div class="form-group">
+						<label for="symbol">Symbol</label>
+						<input type="text" id="symbol" name="symbol" placeholder="e.g., AAPL, TSLA" required>
+					</div>
+					<div class="form-group">
+						<label for="name">Company Name</label>
+						<input type="text" id="name" name="name" placeholder="e.g., Apple Inc." required>
+					</div>
+					<div class="form-group">
+						<label for="accountType">Account Type</label>
+						<select id="accountType" name="accountType" required>
+							<option value="">Select Account Type</option>
+							<option value="Regular Brokerage">Regular Brokerage</option>
+							<option value="Roth IRA">Roth IRA</option>
+							<option value="401(k)">401(k)</option>
+							<option value="529 College Saving">529 College Saving</option>
+							<option value="Yahoo Finance">Yahoo Finance</option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label for="platform">Platform</label>
+						<input type="text" id="platform" name="platform" placeholder="e.g., Fidelity, Charles Schwab, Vanguard" required>
+					</div>
+					<div class="form-group">
+						<label for="shares">Number of Shares</label>
+						<input type="number" id="shares" name="shares" step="0.0001" min="0" placeholder="100" required>
+					</div>
+					<div class="form-group">
+						<label for="purchasePrice">Purchase Price per Share</label>
+						<input type="number" id="purchasePrice" name="purchasePrice" step="0.0001" min="0" placeholder="150.00" required>
+					</div>
+					<div class="form-group">
+						<label for="currentPrice">Current Price per Share (Optional, will auto-update)</label>
+						<input type="number" id="currentPrice" name="currentPrice" step="0.0001" min="0" placeholder="165.00 (will auto-update)">
+					</div>
+                    <div class="form-group">
+						<label for="dividend">Annual Dividend / Share</label>
+						<input type="number" id="dividend" name="dividend" step="0.0001" min="0" placeholder="e.g., 3.50">
+					</div>
+					<div class="form-group">
+						<label for="type">Investment Type</label>
+						<select id="type" name="type" required>
+							<option value="">Select Type</option>
+							<option value="Stock">Stock</option>
+							<option value="ETF">ETF</option>
+							<option value="Market Index">Market Index</option>
+							<option value="Bond">Bond</option>
+							<option value="Mutual Fund">Mutual Fund</option>
+							<option value="Cryptocurrency">Cryptocurrency</option>
+							<option value="Other">Other</option>
+							<option value="CASH">CASH</option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label for="notes">Notes</label>
+						<textarea id="notes" name="notes" placeholder="e.g., Long-term hold, dividend stock, research target price"></textarea>
+					</div>
+					<button type="button" class="btn" onclick="addNewInvestment()">Add Investment</button>
+				</div>
+			</div>
+
+            <div class="investments-list">
+                <h2>Your Investments</h2>
+                <div class="controls-bar">
+                    <div class="form-group">
+                        <label for="sortOptions">Sort By:</label>
+                        <select id="sortOptions">
+                            <option value="default">Default (Grouped)</option>
+                            <option value="symbol-asc">Symbol (A-Z)</option>
+                            <option value="value-desc">Highest Value</option>
+                            <option value="value-asc">Lowest Value</option>
+                            <option value="gain-desc">Biggest Gainer ($)</option>
+                            <option value="gain-asc">Biggest Loser ($)</option>
+                            <option value="today-gain-desc">Top Performer Today ($)</option>
+                            <option value="today-gain-asc">Bottom Performer Today ($)</option>
+                        </select>
+                    </div>
+                     <div class="form-group">
+                        <label for="filterPlatform">Filter by Platform:</label>
+                        <select id="filterPlatform">
+                            <option value="all">All Platforms</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="investmentsList">
+                    <div class="empty-state">
+                        <div style="font-size: 3em; margin-bottom: 15px;">📊</div>
+                        <p>No investments added yet. Start building your portfolio!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="dataTransfer">
+            <h2>Data Transfer</h2>
+            <button class="btn" onclick="exportData()">Export Data</button>
+            <button class="btn" onclick="importData()">Import Data</button>
+            <button class="btn" id="clearAllDataBtn" onclick="clearAllData()">Clear All Data</button>
+            
+            <textarea id="dataOutput" readonly></textarea>
+            
+            <textarea id="dataInput" placeholder="Paste your exported data here..."></textarea>
+            <button class="btn" id="loadImportedDataBtn" onclick="loadImportedData()">Load Imported Data</button>
+            <p style="margin-top: 10px; color: #e74c3c; display: none;" id="importErrorMsg">Error parsing data: Invalid data format..</p>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Theme Management Functions ---
+        const THEME_KEY = 'myInvestmentPortfolioTheme';
+
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            const toggleIcon = document.getElementById('themeToggle');
+            if (toggleIcon) {
+                toggleIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
+            }
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem(THEME_KEY, newTheme);
+            applyTheme(newTheme);
+            updateCharts();
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+            applyTheme(savedTheme);
+        }
+
+        // --- Core Application State ---
+        const FINNHUB_API_KEY = 'd2a7htpr01qvhs80gqsgd2a7htpr01qvhs80gqt0';
+        const ALPHA_VANTAGE_API_KEY = 'I335Y4TT82QD2QJ5';
+        const WATCHLIST_ACCOUNT_TYPE = 'Yahoo Finance';
+        
+        let portfolioData = { username: '', investments: [] };
+        let portfolioHistory = { lastUpdate: null, dataPoints: [] };
+
+        let accountChart = null;
+        let investmentChart = null;
+        let historicalChart = null;
+
+        let expandedGroups = {};
+		let isAddFormExpanded = false;
+        let autoRefreshIntervalId = null;
+        let isAutoRefreshEnabled = true;
+
+        let currentSort = 'default';
+        let currentFilter = 'all';
+
+        const STORAGE_KEY = 'myInvestmentPortfolio';
+        const HISTORY_STORAGE_KEY = 'myInvestmentPortfolioHistory';
+        const EXPANDED_GROUPS_KEY = 'myInvestmentPortfolioExpandedGroups';
+        const AUTO_REFRESH_STATE_KEY = 'myInvestmentPortfolioAutoRefreshState';
+        
+        // --- Event Listener & Initialization ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            loadTheme();
+            loadInvestments();
+            loadHistoricalData();
+            loadAddFormState();
+            loadAutoRefreshState(); 
+
+            document.getElementById('sortOptions').addEventListener('change', (e) => {
+                currentSort = e.target.value;
+                updateDisplay();
+            });
+            document.getElementById('filterPlatform').addEventListener('change', (e) => {
+                currentFilter = e.target.value;
+                updateDisplay();
+            });
+
+            await refreshAllPrices(); 
+
+            if (isAutoRefreshEnabled) {
+                startAutoRefresh();
+            } else {
+                updateAutoRefreshButton();
+            }
+        });
+
+        // --- Charting Functions ---
+        function updateCharts() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const gridColor = currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            const labelColor = currentTheme === 'dark' ? '#f5f5f5' : '#333';
+
+            if (portfolioData.investments.length === 0) {
+                if (accountChart) { accountChart.destroy(); accountChart = null; }
+                if (investmentChart) { investmentChart.destroy(); investmentChart = null; }
+                if (historicalChart) { historicalChart.destroy(); historicalChart = null; }
+                return;
+            }
+
+            updateHistoricalChart(labelColor, gridColor);
+
+            const accountData = {};
+            portfolioData.investments.forEach(inv => {
+                const value = inv.shares * inv.currentPrice;
+                if (inv.accountType && inv.accountType.trim() !== '') {
+                    accountData[inv.accountType] = (accountData[inv.accountType] || 0) + value;
+                }
+            });
+
+            const accountLabels = Object.keys(accountData);
+            const accountValues = Object.values(accountData);
+            const accountColors = {'Regular Brokerage': '#3498db', 'Roth IRA': '#e74c3c', '401(k)': '#f39c12', '529 College Saving': '#9b59b6', 'Yahoo Finance': '#20c997'};
+            const accountChartColors = accountLabels.map(label => accountColors[label] || '#95a5a6');
+
+            if (accountChart) accountChart.destroy();
+            if (accountLabels.length > 0) {
+                const ctx1 = document.getElementById('accountChart').getContext('2d');
+                const totalAccountValue = accountValues.reduce((a, b) => a + b, 0);
+                accountChart = new Chart(ctx1, {
+                    type: 'doughnut', data: { labels: accountLabels, datasets: [{ data: accountValues, backgroundColor: accountChartColors, borderWidth: 3, borderColor: currentTheme === 'dark' ? '#121212' : '#f0f2f5' }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: labelColor, padding: 20, usePointStyle: true } }, tooltip: { callbacks: { label: (c) => `${c.label}: ${formatCurrency(c.parsed)} (${totalAccountValue > 0 ? ((c.parsed * 100) / totalAccountValue).toFixed(1) : '0.0'}%)` } } } }
+                });
+            }
+
+            const investmentData = {};
+            portfolioData.investments.forEach(inv => {
+                const value = inv.shares * inv.currentPrice;
+                if (inv.type && inv.type.trim() !== '') {
+                    investmentData[inv.type] = (investmentData[inv.type] || 0) + value;
+                }
+            });
+            const investmentLabels = Object.keys(investmentData);
+            const investmentValues = Object.values(investmentData);
+            const investmentColors = {'Stock': '#2ecc71', 'ETF': '#3498db', 'Market Index': '#1abc9c', 'Bond': '#f39c12', 'Mutual Fund': '#9b59b6', 'Cryptocurrency': '#e67e22', 'Other': '#95a5a6', 'CASH': '#4CAF50'};
+            const investmentChartColors = investmentLabels.map(label => investmentColors[label] || '#95a5a6');
+            if (investmentChart) investmentChart.destroy();
+            if (investmentLabels.length > 0) {
+                const ctx2 = document.getElementById('investmentChart').getContext('2d');
+                const totalInvestmentValue = investmentValues.reduce((a, b) => a + b, 0);
+                investmentChart = new Chart(ctx2, {
+                    type: 'pie', data: { labels: investmentLabels, datasets: [{ data: investmentValues, backgroundColor: investmentChartColors, borderWidth: 3, borderColor: currentTheme === 'dark' ? '#121212' : '#f0f2f5' }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: labelColor, padding: 20, usePointStyle: true } }, tooltip: { callbacks: { label: (c) => `${c.label}: ${formatCurrency(c.parsed)} (${totalInvestmentValue > 0 ? ((c.parsed * 100) / totalInvestmentValue).toFixed(1) : '0.0'}%)` } } } }
+                });
+            }
+        }
+
+        function updateHistoricalChart(labelColor, gridColor) {
+            if (historicalChart) {
+                historicalChart.destroy();
+            }
+
+            const historyLabels = portfolioHistory.dataPoints.map(dp => new Date(dp.date).toLocaleDateString());
+            const historyValues = portfolioHistory.dataPoints.map(dp => dp.value);
+
+            if (historyLabels.length > 0) {
+                const ctx = document.getElementById('historicalChart').getContext('2d');
+                historicalChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: historyLabels,
+                        datasets: [{
+                            label: 'Total Portfolio Value',
+                            data: historyValues,
+                            borderColor: 'var(--accent-color-1)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                            fill: true,
+                            tension: 0.3,
+                            pointBackgroundColor: 'var(--accent-color-2)',
+                            pointRadius: 4,
+                            pointHoverRadius: 7
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { ticks: { color: labelColor, callback: function(value) { return formatCurrency(value); } }, grid: { color: gridColor } },
+                            x: { ticks: { color: labelColor }, grid: { color: gridColor } }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: function(context) { return `Value: ${formatCurrency(context.parsed.y)}`; } } }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // --- Data Persistence Functions ---
+        function saveInvestments() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolioData));
+                localStorage.setItem(EXPANDED_GROUPS_KEY, JSON.stringify(expandedGroups));
+                recordHistoricalData();
+                saveHistoricalData();
+                updateDataStatus(true);
+            } catch (e) {
+                console.error("Error saving to localStorage:", e);
+                updateDataStatus(false, "Error saving data");
+            }
+        }
+
+        function loadInvestments() {
+            try {
+                const storedData = localStorage.getItem(STORAGE_KEY);
+                if (storedData) {
+                    const parsedData = JSON.parse(storedData);
+                    if (parsedData.username !== undefined && Array.isArray(parsedData.investments)) {
+                        portfolioData = parsedData;
+                    } else if (Array.isArray(parsedData)) {
+                        portfolioData = { username: '', investments: parsedData };
+                    } else {
+                        portfolioData = { username: '', investments: [] };
+                    }
+                    portfolioData.investments.forEach(inv => { 
+                        if (inv.notes === undefined) inv.notes = ''; 
+                        if (inv.dividend === undefined) inv.dividend = 0;
+                    });
+                    updateDataStatus(true);
+                } else {
+                    portfolioData = { username: '', investments: [] };
+                    updateDataStatus(false, "No saved data found");
+                }
+                const storedExpandedGroups = localStorage.getItem(EXPANDED_GROUPS_KEY);
+                expandedGroups = storedExpandedGroups ? JSON.parse(storedExpandedGroups) : {};
+            } catch (e) {
+                console.error("Error loading from localStorage:", e);
+                portfolioData = { username: '', investments: [] };
+                expandedGroups = {};
+                updateDataStatus(false, "Error loading data");
+            }
+            sortInvestments('default', portfolioData.investments);
+        }
+        
+        function recordHistoricalData() {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const lastUpdateStr = portfolioHistory.lastUpdate ? new Date(portfolioHistory.lastUpdate).toISOString().split('T')[0] : null;
+
+            if (todayStr !== lastUpdateStr) {
+                const stats = calculateStats();
+                const totalValue = stats.totalValue;
+
+                if (totalValue > 0 || portfolioHistory.dataPoints.length === 0) {
+                    const todayIndex = portfolioHistory.dataPoints.findIndex(dp => dp.date === todayStr);
+                    if (todayIndex > -1) {
+                        portfolioHistory.dataPoints[todayIndex].value = totalValue;
+                    } else {
+                        portfolioHistory.dataPoints.push({ date: todayStr, value: totalValue });
+                    }
+                    portfolioHistory.lastUpdate = now.toISOString();
+                }
+            }
+        }
+
+        function saveHistoricalData() {
+            try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(portfolioHistory)); } 
+            catch (e) { console.error("Error saving historical data:", e); }
+        }
+
+        function loadHistoricalData() {
+            try {
+                const storedHistory = localStorage.getItem(HISTORY_STORAGE_KEY);
+                portfolioHistory = storedHistory ? JSON.parse(storedHistory) : { lastUpdate: null, dataPoints: [] };
+            } catch (e) {
+                console.error("Error loading historical data:", e);
+                portfolioHistory = { lastUpdate: null, dataPoints: [] };
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear ALL investment data? This action cannot be undone.')) {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(EXPANDED_GROUPS_KEY);
+                localStorage.removeItem(HISTORY_STORAGE_KEY);
+                portfolioData = { username: '', investments: [] };
+                expandedGroups = {};
+                portfolioHistory = { lastUpdate: null, dataPoints: [] };
+                updateDisplay();
+                updateDataStatus(false, "Data cleared by user");
+                alert('All investment data has been cleared.');
+            }
+        }
+
+        function updateDataStatus(isSaved, message = "") {
+            const statusElement = document.getElementById('dataStatus');
+            statusElement.classList.remove('saved', 'loading');
+            if (isSaved === true) { statusElement.textContent = '✅ Data Saved Locally'; statusElement.classList.add('saved'); } 
+            else if (isSaved === false) { statusElement.textContent = `⚠️ Data Stored in Memory ${message ? `(${message})` : ''}`; } 
+            else if (isSaved === 'loading') { statusElement.textContent = '🔄 Updating prices...'; statusElement.classList.add('loading'); }
+        }
+        
+        // --- Auto Refresh Logic ---
+        function saveAutoRefreshState() { localStorage.setItem(AUTO_REFRESH_STATE_KEY, JSON.stringify(isAutoRefreshEnabled)); }
+        function loadAutoRefreshState() { const s = localStorage.getItem(AUTO_REFRESH_STATE_KEY); isAutoRefreshEnabled = s !== null ? JSON.parse(s) : true; }
+        function updateAutoRefreshButton() {
+            const btn = document.getElementById('toggleAutoRefreshBtn'); if (!btn) return;
+            if (isAutoRefreshEnabled) { btn.textContent = 'Pause Auto-Refresh'; btn.style.background = 'linear-gradient(45deg, #f39c12, #e67e22)'; } 
+            else { btn.textContent = 'Resume Auto-Refresh'; btn.style.background = 'linear-gradient(45deg, #27ae60, #2ecc71)'; }
+        }
+        function startAutoRefresh() {
+            if (autoRefreshIntervalId !== null) return; isAutoRefreshEnabled = true;
+            autoRefreshIntervalId = setInterval(() => { refreshAllPrices(); }, 60000);
+            updateAutoRefreshButton(); saveAutoRefreshState();
+        }
+        function stopAutoRefresh() {
+            if (autoRefreshIntervalId !== null) { clearInterval(autoRefreshIntervalId); autoRefreshIntervalId = null; }
+            isAutoRefreshEnabled = false; updateAutoRefreshButton(); saveAutoRefreshState();
+        }
+        function toggleAutoRefresh() {
+            if (isAutoRefreshEnabled) { stopAutoRefresh(); } 
+            else { startAutoRefresh(); refreshAllPrices(); }
+        }
+        
+        // --- API & Price Fetching ---
+        async function fetchPriceFromFinnhub(symbol) {
+            if (!FINNHUB_API_KEY) { return { currentPrice: null, previousClosePrice: null }; }
+            try {
+                const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
+                const data = await response.json();
+                if (response.ok && data && typeof data.c === 'number' && data.c > 0) { return { currentPrice: data.c, previousClosePrice: typeof data.pc === 'number' && data.pc > 0 ? data.pc : null }; } 
+                else { return { currentPrice: null, previousClosePrice: null }; }
+            } catch (error) { return { currentPrice: null, previousClosePrice: null }; }
+        }
+        
+        async function fetchPriceFromAlphaVantage(symbol) {
+            if (!ALPHA_VANTAGE_API_KEY) { return { currentPrice: null, previousClosePrice: null }; }
+            try {
+                const response = await fetch(`https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`);
+                const data = await response.json();
+                const timeSeries = data['Time Series (Daily)'];
+                if (timeSeries) {
+                    const dates = Object.keys(timeSeries);
+                    const latestDate = dates[0];
+                    const previousDate = dates[1];
+                    const currentPrice = parseFloat(timeSeries[latestDate]['4. close']);
+                    const previousClosePrice = previousDate ? parseFloat(timeSeries[previousDate]['4. close']) : null;
+                    return { currentPrice, previousClosePrice };
+                } else {
+                    console.error(`Alpha Vantage Error for ${symbol}:`, data['Information'] || 'No time series data found.');
+                    return { currentPrice: null, previousClosePrice: null };
+                }
+            } catch (error) {
+                console.error(`Alpha Vantage Network Error for ${symbol}:`, error);
+                return { currentPrice: null, previousClosePrice: null };
+            }
+        }
+
+        async function fetchCurrentPrice(investment) {
+            let priceData = { currentPrice: investment.currentPrice, previousClosePrice: investment.previousClosePrice };
+            if (investment.type === 'Mutual Fund') {
+                priceData = await fetchPriceFromAlphaVantage(investment.symbol);
+            } else if (['Stock', 'ETF', 'Cryptocurrency', 'Market Index'].includes(investment.type)) {
+                priceData = await fetchPriceFromFinnhub(investment.symbol);
+            } else if (investment.type === 'CASH') {
+                priceData = { currentPrice: investment.currentPrice, previousClosePrice: investment.currentPrice };
+            }
+            return priceData;
+        }
+
+        async function refreshAllPrices() {
+            if (portfolioData.investments.length === 0) return;
+            const refreshButton = document.querySelector('.refresh-button-container .btn:last-child');
+            const originalButtonText = refreshButton.textContent;
+            refreshButton.textContent = 'Refreshing...'; refreshButton.disabled = true; updateDataStatus('loading');
+            for (const investment of portfolioData.investments) {
+                const priceData = await fetchCurrentPrice(investment);
+                if (priceData.currentPrice !== null) {
+                    investment.currentPrice = priceData.currentPrice;
+                    investment.previousClosePrice = priceData.previousClosePrice;
+                }
+                if (investment.type === 'CASH') { investment.previousClosePrice = investment.currentPrice; }
+            }
+            updateDisplay(); saveInvestments();
+            refreshButton.textContent = originalButtonText; refreshButton.disabled = false; updateDataStatus(true);
+        }
+        
+        // --- Data Handling, Sorting & Filtering ---
+        function sortInvestments(sortBy, investments) {
+            const sortedInvestments = [...investments]; 
+            switch(sortBy) {
+                case 'symbol-asc':
+                    sortedInvestments.sort((a, b) => a.symbol.localeCompare(b.symbol));
+                    break;
+                case 'value-desc':
+                    sortedInvestments.sort((a, b) => (b.shares * b.currentPrice) - (a.shares * a.currentPrice));
+                    break;
+                case 'value-asc':
+                    sortedInvestments.sort((a, b) => (a.shares * a.currentPrice) - (b.shares * b.currentPrice));
+                    break;
+                case 'gain-desc':
+                    sortedInvestments.sort((a, b) => ((b.shares * b.currentPrice) - (b.shares * b.purchasePrice)) - ((a.shares * a.currentPrice) - (a.shares * a.purchasePrice)));
+                    break;
+                case 'gain-asc':
+                    sortedInvestments.sort((a, b) => ((a.shares * a.currentPrice) - (a.shares * a.purchasePrice)) - ((b.shares * b.currentPrice) - (b.shares * b.purchasePrice)));
+                    break;
+                case 'today-gain-desc':
+                    sortedInvestments.sort((a, b) => ((b.currentPrice - b.previousClosePrice) * b.shares) - ((a.currentPrice - a.previousClosePrice) * a.shares));
+                    break;
+                 case 'today-gain-asc':
+                    sortedInvestments.sort((a, b) => ((a.currentPrice - a.previousClosePrice) * a.shares) - ((b.currentPrice - b.previousClosePrice) * b.shares));
+                    break;
+                case 'default':
+                default:
+                    const accountTypeOrder = ['Regular Brokerage', 'Roth IRA', '401(k)', 'Yahoo Finance'];
+                    sortedInvestments.sort((a, b) => {
+                        const indexA = accountTypeOrder.indexOf(a.accountType), indexB = accountTypeOrder.indexOf(b.accountType);
+                        const finalIndexA = indexA === -1 ? accountTypeOrder.length : indexA, finalIndexB = indexB === -1 ? accountTypeOrder.length : indexB;
+                        if (finalIndexA !== finalIndexB) return finalIndexA - finalIndexB;
+                        if (a.type === 'CASH' && b.type !== 'CASH') return -1;
+                        if (a.type !== 'CASH' && b.type === 'CASH') return 1;
+                        return a.symbol.localeCompare(b.symbol);
+                    });
+                    break;
+            }
+            return sortedInvestments;
+        }
+
+        function populatePlatformFilter() {
+            const filterSelect = document.getElementById('filterPlatform');
+            const platforms = new Set(portfolioData.investments.map(inv => inv.platform).filter(p => p)); 
+            
+            while (filterSelect.options.length > 1) {
+                filterSelect.remove(1);
+            }
+
+            platforms.forEach(platform => {
+                const option = document.createElement('option');
+                option.value = platform;
+                option.textContent = platform;
+                filterSelect.appendChild(option);
+            });
+            filterSelect.value = currentFilter; 
+        }
+        
+        // --- Import / Export Functions ---
+        function exportData() {
+            const dataOutput = document.getElementById('dataOutput');
+            dataOutput.value = JSON.stringify(portfolioData, null, 2);
+            dataOutput.style.display = 'block'; dataOutput.select(); document.execCommand('copy');
+            alert('Data copied to clipboard!');
+        }
+        function importData() {
+            document.getElementById('dataOutput').style.display = 'none';
+            document.getElementById('dataInput').style.display = 'block';
+            document.getElementById('loadImportedDataBtn').style.display = 'block';
+            document.getElementById('importErrorMsg').style.display = 'none';
+        }
+
+        function loadImportedData() {
+            const dataInput = document.getElementById('dataInput');
+            const importErrorMsg = document.getElementById('importErrorMsg');
+            let importedText = dataInput.value.trim();
+            if (!importedText || !confirm('Are you sure? This will overwrite your current portfolio.')) return;
+            try {
+                const parsedData = JSON.parse(importedText);
+                if (parsedData && typeof parsedData === 'object' && parsedData.investments && Array.isArray(parsedData.investments)) {
+                    portfolioData = parsedData;
+                    portfolioHistory = { lastUpdate: null, dataPoints: [] };
+                    saveInvestments(); 
+                    updateDisplay();
+                    alert('Portfolio loaded successfully!');
+                    dataInput.value = '';
+                    document.getElementById('dataInput').style.display = 'none';
+                    document.getElementById('loadImportedDataBtn').style.display = 'none';
+                    importErrorMsg.style.display = 'none';
+                } else {
+                    throw new Error('Invalid data format. Expected an object with an "investments" array.');
+                }
+            } catch (e) {
+                importErrorMsg.textContent = `Error parsing data: ${e.message}.`;
+                importErrorMsg.style.display = 'block';
+            }
+        }
+        
+        // --- UI & Form Functions ---
+        function updateUserName() {
+            portfolioData.username = document.getElementById('userNameInput').value.trim();
+            saveInvestments(); updateUserNameDisplay();
+        }
+        function updateUserNameDisplay() {
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            const userNameInput = document.getElementById('userNameInput');
+            userNameDisplay.textContent = portfolioData.username ? `for ${portfolioData.username}` : '';
+            userNameInput.value = portfolioData.username;
+        }
+        function toggleGroup(groupName) {
+            expandedGroups[groupName] = !expandedGroups[groupName];
+            saveInvestments(); updateDisplay();
+        }
+		function toggleAddForm() {
+			isAddFormExpanded = !isAddFormExpanded;
+			const addFormContent = document.getElementById('addFormContent');
+			const toggleIcon = document.getElementById('addFormToggleIcon');
+			if (isAddFormExpanded) { addFormContent.style.display = 'block'; toggleIcon.innerHTML = '&#9660;'; } 
+            else { addFormContent.style.display = 'none'; toggleIcon.innerHTML = '&#9658;'; }
+			localStorage.setItem('addFormExpanded', isAddFormExpanded);
+		}
+		function loadAddFormState() {
+			const savedState = localStorage.getItem('addFormExpanded');
+			if (savedState !== null) { isAddFormExpanded = savedState === 'true'; toggleAddForm(); }
+		}
+        function formatCurrency(amount) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount); }
+        function formatPercentage(value) { return (value * 100).toFixed(2) + '%'; }
+        
+        // --- Investment CRUD Operations ---
+        function addNewInvestment() {
+            const symbol = document.getElementById('symbol').value.trim();
+            const name = document.getElementById('name').value.trim();
+            const accountType = document.getElementById('accountType').value;
+            const platform = document.getElementById('platform').value.trim();
+            const shares = document.getElementById('shares').value;
+            const purchasePrice = document.getElementById('purchasePrice').value;
+            let currentPrice = document.getElementById('currentPrice').value;
+            const dividend = document.getElementById('dividend').value;
+            const type = document.getElementById('type').value;
+            const notes = document.getElementById('notes').value.trim();
+
+            if (!symbol || !name || !accountType || !shares || !purchasePrice || !type || !platform) { alert('Please fill in all required fields.'); return; }
+            if (isNaN(shares) || isNaN(purchasePrice) || parseFloat(shares) < 0 || parseFloat(purchasePrice) < 0) { alert('Please enter valid non-negative numbers.'); return; }
+
+            const investment = { id: Date.now(), symbol: symbol.toUpperCase(), name, accountType, platform, shares: parseFloat(shares), purchasePrice: parseFloat(purchasePrice), currentPrice: currentPrice ? parseFloat(currentPrice) : parseFloat(purchasePrice), dividend: dividend ? parseFloat(dividend) : 0, previousClosePrice: null, type, notes };
+            portfolioData.investments.push(investment);
+            saveInvestments(); updateDisplay(); clearForm();
+            fetchCurrentPrice(investment).then(priceData => {
+                if (priceData.currentPrice !== null) {
+                    investment.currentPrice = priceData.currentPrice; investment.previousClosePrice = priceData.previousClosePrice;
+                    updateDisplay(); saveInvestments();
+                }
+            });
+        }
+        function clearForm() {
+            document.getElementById('symbol').value = ''; document.getElementById('name').value = ''; document.getElementById('accountType').value = ''; document.getElementById('platform').value = ''; document.getElementById('shares').value = '';
+            document.getElementById('purchasePrice').value = ''; document.getElementById('currentPrice').value = ''; document.getElementById('dividend').value = ''; document.getElementById('type').value = ''; document.getElementById('notes').value = '';
+        }
+        function removeInvestment(id) {
+            if (confirm('Are you sure you want to remove this investment?')) {
+                portfolioData.investments = portfolioData.investments.filter(inv => inv.id !== id);
+                saveInvestments(); updateDisplay();
+            }
+        }
+        function editInvestment(id) {
+            document.querySelectorAll('.edit-form').forEach(f => f.classList.remove('active'));
+            document.querySelectorAll('.investment-item').forEach(i => i.classList.remove('editing'));
+            const editForm = document.getElementById(`edit-form-${id}`);
+            const investmentItem = document.getElementById(`investment-${id}`);
+            editForm.classList.add('active'); investmentItem.classList.add('editing');
+            const inv = portfolioData.investments.find(i => i.id === id);
+            editForm.querySelector('.edit-symbol').value = inv.symbol; editForm.querySelector('.edit-name').value = inv.name; editForm.querySelector('.edit-shares').value = inv.shares; editForm.querySelector('.edit-purchase-price').value = inv.purchasePrice;
+            editForm.querySelector('.edit-current-price').value = inv.currentPrice; editForm.querySelector('.edit-dividend').value = inv.dividend || 0; editForm.querySelector('.edit-account-type').value = inv.accountType; editForm.querySelector('.edit-platform').value = inv.platform || ''; editForm.querySelector('.edit-type').value = inv.type; editForm.querySelector('.edit-notes').value = inv.notes || '';
+        }
+        function cancelEdit(id) {
+            document.getElementById(`edit-form-${id}`).classList.remove('active');
+            document.getElementById(`investment-${id}`).classList.remove('editing');
+        }
+        function saveInvestmentEdit(id) {
+            const editForm = document.getElementById(`edit-form-${id}`);
+            const symbol = editForm.querySelector('.edit-symbol').value.trim().toUpperCase(); const name = editForm.querySelector('.edit-name').value.trim(); const shares = parseFloat(editForm.querySelector('.edit-shares').value);
+            const purchasePrice = parseFloat(editForm.querySelector('.edit-purchase-price').value); const currentPrice = parseFloat(editForm.querySelector('.edit-current-price').value); const dividend = parseFloat(editForm.querySelector('.edit-dividend').value); const accountType = editForm.querySelector('.edit-account-type').value;
+            const platform = editForm.querySelector('.edit-platform').value.trim(); const type = editForm.querySelector('.edit-type').value; const notes = editForm.querySelector('.edit-notes').value.trim();
+            if (!symbol || !name || !accountType || !type || !platform || isNaN(shares) || isNaN(purchasePrice) || isNaN(currentPrice) || shares < 0 || purchasePrice < 0 || currentPrice < 0) { alert('Invalid data.'); return; }
+            const inv = portfolioData.investments.find(i => i.id === id);
+            if (inv) {
+                inv.symbol = symbol; inv.name = name; inv.shares = shares; inv.purchasePrice = purchasePrice; inv.currentPrice = currentPrice; inv.dividend = dividend; inv.accountType = accountType; inv.platform = platform; inv.type = type; inv.notes = notes;
+                if (type === 'CASH') inv.previousClosePrice = currentPrice;
+                saveInvestments(); updateDisplay(); cancelEdit(id);
+            }
+        }
+        
+        // --- Calculation and Rendering Logic ---
+        function calculateStats() {
+            let totalInvested = 0, totalValue = 0, totalDailyGainLoss = 0, estimatedAnnualIncome = 0;
+            portfolioData.investments.forEach(inv => {
+                if (inv.accountType !== WATCHLIST_ACCOUNT_TYPE) {
+                    totalInvested += inv.shares * inv.purchasePrice;
+                    totalValue += inv.shares * inv.currentPrice;
+                    if (inv.type !== 'CASH' && inv.previousClosePrice > 0) {
+                        totalDailyGainLoss += (inv.currentPrice - inv.previousClosePrice) * inv.shares;
+                    }
+                    if (inv.dividend > 0) {
+                        estimatedAnnualIncome += inv.shares * inv.dividend;
+                    }
+                }
+            });
+            const totalGainLoss = totalValue - totalInvested;
+            const totalReturn = totalInvested > 0 ? totalGainLoss / totalInvested : 0;
+            const portfolioYieldOnCost = totalInvested > 0 ? estimatedAnnualIncome / totalInvested : 0;
+            return { totalInvested, totalValue, totalGainLoss, totalReturn, totalDailyGainLoss, estimatedAnnualIncome, portfolioYieldOnCost };
+        }
+        function updateStats() {
+            const stats = calculateStats();
+            document.getElementById('totalValue').textContent = formatCurrency(stats.totalValue);
+            document.getElementById('totalInvested').textContent = formatCurrency(stats.totalInvested);
+            const gainLossEl = document.getElementById('totalGainLoss'); gainLossEl.textContent = formatCurrency(stats.totalGainLoss); gainLossEl.className = 'stat-value ' + (stats.totalGainLoss >= 0 ? 'positive' : 'negative');
+            const returnEl = document.getElementById('totalReturn'); returnEl.textContent = formatPercentage(stats.totalReturn); returnEl.className = 'stat-value ' + (stats.totalReturn >= 0 ? 'positive' : 'negative');
+            const todayGainLossEl = document.getElementById('todayPortfolioGainLoss'); todayGainLossEl.textContent = formatCurrency(stats.totalDailyGainLoss); todayGainLossEl.className = 'stat-value ' + (stats.totalDailyGainLoss >= 0 ? 'positive' : 'negative');
+            document.getElementById('estimatedAnnualIncome').textContent = formatCurrency(stats.estimatedAnnualIncome);
+            document.getElementById('portfolioYieldOnCost').textContent = formatPercentage(stats.portfolioYieldOnCost);
+        }
+        function getAccountBadgeClass(accountType) { const map = { 'Regular Brokerage': 'account-regular', 'Roth IRA': 'account-roth', '401(k)': 'account-401k', '529 College Saving': 'account-529', 'Yahoo Finance': 'account-yahoo' }; return map[accountType] || 'account-regular'; }
+        
+        function renderInvestments() {
+            const container = document.getElementById('investmentsList'); container.innerHTML = '';
+            let investmentsToRender = [...portfolioData.investments];
+            if (currentFilter !== 'all') {
+                investmentsToRender = investmentsToRender.filter(inv => inv.platform === currentFilter);
+            }
+            investmentsToRender = sortInvestments(currentSort, investmentsToRender);
+            if (investmentsToRender.length === 0) { container.innerHTML = `<div class="empty-state"><div style="font-size: 3em; margin-bottom: 15px;">📊</div><p>No investments match the current filter.</p></div>`; return; }
+            if (currentSort === 'default') {
+                const investmentsByGroup = {}; const ungroupedInvestments = [];
+                const accountTypeOrder = ['Regular Brokerage', 'Roth IRA', '401(k)', 'Yahoo Finance'];
+                investmentsToRender.forEach(inv => {
+                    if (accountTypeOrder.includes(inv.accountType)) { if (!investmentsByGroup[inv.accountType]) investmentsByGroup[inv.accountType] = []; investmentsByGroup[inv.accountType].push(inv); } 
+                    else { ungroupedInvestments.push(inv); }
+                });
+                accountTypeOrder.forEach(groupName => {
+                    const groupInvestments = investmentsByGroup[groupName];
+                    if (groupInvestments && groupInvestments.length > 0) {
+                        const totalGroupValue = groupInvestments.reduce((s, i) => s + (i.shares * i.currentPrice), 0);
+                        const totalGroupGainLoss = totalGroupValue - groupInvestments.reduce((s, i) => s + (i.shares * i.purchasePrice), 0);
+                        let totalGroupDailyGainLoss = 0;
+                        groupInvestments.forEach(i => { if (i.type !== 'CASH' && i.previousClosePrice > 0) totalGroupDailyGainLoss += (i.currentPrice - i.previousClosePrice) * i.shares; });
+                        const isExpanded = expandedGroups[groupName];
+                        let groupHtml = `<div class="investment-group ${isExpanded ? 'expanded' : ''}"><div class="investment-group-header" data-group-type="${groupName}" onclick="toggleGroup('${groupName}')"><div class="group-summary"><div class="group-title">${groupName}</div><div class="group-stats"><div class="group-stat-item"><div class="detail-label">Value</div><div class="detail-value">${formatCurrency(totalGroupValue)}</div></div><div class="group-stat-item"><div class="detail-label">G/L</div><div class="detail-value ${totalGroupGainLoss >= 0 ? 'positive' : 'negative'}">${formatCurrency(totalGroupGainLoss)}</div></div><div class="group-stat-item"><div class="detail-label">Today</div><div class="detail-value ${totalGroupDailyGainLoss >= 0 ? 'positive' : 'negative'}">${formatCurrency(totalGroupDailyGainLoss)}</div></div></div></div><span class="toggle-icon">${isExpanded ? '&#9660;' : '&#9658;'}</span></div><div class="investment-group-content">`;
+                        groupInvestments.forEach(inv => { groupHtml += renderIndividualInvestmentItem(inv); });
+                        groupHtml += `</div></div>`; container.innerHTML += groupHtml;
+                    }
+                });
+                ungroupedInvestments.forEach(inv => { container.innerHTML += renderIndividualInvestmentItem(inv); });
+            } else {
+                investmentsToRender.forEach(inv => {
+                    container.innerHTML += renderIndividualInvestmentItem(inv);
+                });
+            }
+        }
+        
+        function renderIndividualInvestmentItem(inv) {
+            const totalInvested = inv.shares * inv.purchasePrice, currentValue = inv.shares * inv.currentPrice;
+            const totalGainLoss = currentValue - totalInvested, totalReturnPercentage = totalInvested > 0 ? totalGainLoss / totalInvested : 0;
+            let todayGainLossAmount = 0, todayGainLossPercentage = 0, isTodayGainLossCalculable = false;
+            if (inv.type !== 'CASH' && inv.previousClosePrice > 0) {
+                todayGainLossAmount = (inv.currentPrice - inv.previousClosePrice) * inv.shares;
+                const prevCloseValue = inv.previousClosePrice * inv.shares;
+                if(prevCloseValue > 0) todayGainLossPercentage = todayGainLossAmount / prevCloseValue;
+                isTodayGainLossCalculable = true;
+            }
+            const annualIncome = (inv.dividend || 0) * inv.shares;
+            const yieldOnCost = inv.purchasePrice > 0 ? (inv.dividend || 0) / inv.purchasePrice : 0;
+
+            const gainLossClass = totalGainLoss >= 0 ? 'positive' : 'negative';
+            const todayGainLossClass = todayGainLossAmount >= 0 ? 'positive' : 'negative';
+            return `<div class="investment-item" id="investment-${inv.id}" data-account-type="${inv.accountType}"><div class="investment-header"><div><div class="investment-symbol">${inv.symbol}<span class="account-badge ${getAccountBadgeClass(inv.accountType)}">${inv.accountType}</span></div><div style="color: #666; font-size: 0.9em;">${inv.name} • ${inv.type}</div></div><div><button class="btn btn-edit" onclick="editInvestment(${inv.id})">Edit</button><button class="btn btn-danger" onclick="removeInvestment(${inv.id})">Remove</button></div></div><div class="investment-details"><div class="detail-item"><div class="detail-label">Shares</div><div class="detail-value">${inv.shares.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 4 })}</div></div><div class="detail-item"><div class="detail-label">Purchase Price</div><div class="detail-value">${formatCurrency(inv.purchasePrice)}</div></div><div class="detail-item"><div class="detail-label">Current Price</div><div class="detail-value">${formatCurrency(inv.currentPrice)}</div></div><div class="detail-item"><div class="detail-label">Total Invested</div><div class="detail-value">${formatCurrency(totalInvested)}</div></div><div class="detail-item"><div class="detail-label">Current Value</div><div class="detail-value">${formatCurrency(currentValue)}</div></div><div class="detail-item"><div class="detail-label">Total G/L</div><div class="detail-value ${gainLossClass}">${formatCurrency(totalGainLoss)}</div></div><div class="detail-item"><div class="detail-label">Total Return %</div><div class="detail-value ${gainLossClass}">${formatPercentage(totalReturnPercentage)}</div></div><div class="detail-item"><div class="detail-label">Today's G/L $</div><div class="detail-value ${todayGainLossClass}">${isTodayGainLossCalculable ? formatCurrency(todayGainLossAmount) : 'N/A'}</div></div><div class="detail-item"><div class="detail-label">Today's G/L %</div><div class="detail-value ${todayGainLossClass}">${isTodayGainLossCalculable ? formatPercentage(todayGainLossPercentage) : 'N/A'}</div></div><div class="detail-item"><div class="detail-label">Annual Income</div><div class="detail-value">${formatCurrency(annualIncome)}</div></div><div class="detail-item"><div class="detail-label">Yield on Cost</div><div class="detail-value">${formatPercentage(yieldOnCost)}</div></div><div class="detail-item"><div class="detail-label">Platform</div><div class="detail-value">${inv.platform || 'N/A'}</div></div>${inv.notes ? `<div class="detail-item notes"><strong>Notes:</strong> ${inv.notes}</div>` : ''}</div><div class="edit-form" id="edit-form-${inv.id}"><div class="edit-inputs"><div class="edit-group"><label>Symbol:</label><input type="text" class="edit-input edit-symbol"></div><div class="edit-group"><label>Name:</label><input type="text" class="edit-input edit-name"></div><div class="edit-group"><label>Account:</label><select class="edit-input edit-account-type"><option value="Regular Brokerage">Regular Brokerage</option><option value="Roth IRA">Roth IRA</option><option value="401(k)">401(k)</option><option value="529 College Saving">529</option><option value="Yahoo Finance">Yahoo Finance</option></select></div><div class="edit-group"><label>Platform:</label><input type="text" class="edit-input edit-platform"></div><div class="edit-group"><label>Shares:</label><input type="number" step="0.0001" min="0" class="edit-input edit-shares"></div><div class="edit-group"><label>Purchase Price:</label><input type="number" step="0.0001" min="0" class="edit-input edit-purchase-price"></div><div class="edit-group"><label>Current Price:</label><input type="number" step="0.0001" min="0" class="edit-input edit-current-price"></div><div class="edit-group"><label>Annual Dividend/Share:</label><input type="number" step="0.0001" min="0" class="edit-input edit-dividend"></div><div class="edit-group"><label>Type:</label><select class="edit-input edit-type"><option value="Stock">Stock</option><option value="ETF">ETF</option><option value="Market Index">Market Index</option><option value="Bond">Bond</option><option value="Mutual Fund">Mutual Fund</option><option value="Cryptocurrency">Cryptocurrency</option><option value="Other">Other</option><option value="CASH">CASH</option></select></div><div class="edit-group full-width"><label>Notes:</label><textarea class="edit-input edit-notes"></textarea></div></div><div class="edit-buttons"><button class="btn btn-save" onclick="saveInvestmentEdit(${inv.id})">Save</button><button class="btn btn-cancel" onclick="cancelEdit(${inv.id})">Cancel</button></div></div></div>`;
+        }
+
+        function updateDisplay() {
+            updateUserNameDisplay();
+            updateStats();
+            updateCharts();
+            populatePlatformFilter(); 
+            renderInvestments();
+        }
+    </script>
+</body>
+</html>
